@@ -7,14 +7,7 @@ export default class CommonJSFormatter extends DefaultFormatter {
   init() {
     var file  = this.file;
     var scope = file.scope;
-
     scope.rename("module");
-
-    if (!this.noInteropRequireImport && this.hasNonDefaultExports) {
-      var templateName = "exports-module-declaration";
-      if (this.file.isLoose("es6.modules")) templateName += "-loose";
-      file.ast.program.body.unshift(util.template(templateName, true));
-    }
   };
 
   importSpecifier(specifier, node, nodes) {
@@ -25,19 +18,11 @@ export default class CommonJSFormatter extends DefaultFormatter {
     // import foo from "foo";
     if (t.isSpecifierDefault(specifier)) {
       if (!includes(this.file.dynamicImportedNoDefault, node)) {
-        if (this.noInteropRequireImport || includes(this.file.dynamicImported, node)) {
-          ref = t.memberExpression(ref, t.identifier("default"));
-        } else {
-          ref = t.callExpression(this.file.addHelper("interop-require"), [ref]);
-        }
+        ref = t.memberExpression(ref, t.identifier("default"));
       }
       nodes.push(t.variableDeclaration("var", [t.variableDeclarator(variableName, ref)]));
     } else {
       if (t.isImportNamespaceSpecifier(specifier)) {
-        if (!this.noInteropRequireImport) {
-          ref = t.callExpression(this.file.addHelper("interop-require-wildcard"), [ref]);
-        }
-
         // import * as bar from "foo";
         nodes.push(t.variableDeclaration("var", [
           t.variableDeclarator(variableName, ref)

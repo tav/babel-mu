@@ -30,20 +30,12 @@ exports.Function = function (node, parent, scope, file) {
   t.ensureBlock(node);
 
   var body = [];
-
-  var argsIdentifier = t.identifier("arguments");
-  argsIdentifier._shadowedFunctionLiteral = true;
-
-  var lastNonDefaultParam = 0;
-
   var state = { iife: false, scope: scope };
 
   var pushDefNode = function (left, right, i) {
     var defNode = util.template("default-parameter", {
       VARIABLE_NAME: left,
-      DEFAULT_VALUE: right,
-      ARGUMENT_KEY:  t.literal(i),
-      ARGUMENTS:     argsIdentifier
+      DEFAULT_VALUE: right
     }, true);
     file.checkNode(defNode);
     defNode._blockHoist = node.params.length - i;
@@ -55,10 +47,6 @@ exports.Function = function (node, parent, scope, file) {
     var param = params[i];
 
     if (!param.isAssignmentPattern()) {
-      if (!param.isRestElement()) {
-        lastNonDefaultParam = i + 1;
-      }
-
       if (!param.isIdentifier()) {
         param.traverse(iifeVisitor, state);
       }
@@ -73,9 +61,7 @@ exports.Function = function (node, parent, scope, file) {
     var left  = param.get("left");
     var right = param.get("right");
 
-    var placeholder = scope.generateUidIdentifier("x");
-    placeholder._isDefaultPlaceholder = true;
-    node.params[i] = placeholder;
+    node.params[i] = {type: "Identifier", name: left.container.left.name, start: null};
 
     if (!state.iife) {
       if (right.isIdentifier() && scope.hasOwnBinding(right.node.name)) {
@@ -87,9 +73,6 @@ exports.Function = function (node, parent, scope, file) {
 
     pushDefNode(left.node, right.node, i);
   }
-
-  // we need to cut off all trailing default parameters
-  node.params = node.params.slice(0, lastNonDefaultParam);
 
   if (state.iife) {
     body.push(callDelegate(node));
