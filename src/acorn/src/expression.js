@@ -728,6 +728,7 @@ pp.parseYield = function() {
 // Parses array and generator comprehensions.
 
 pp.parseComprehension = function(node, isGenerator) {
+  var cNode, cType;
   node.blocks = []
   while (this.type === tt._for) {
     let block = this.startNode()
@@ -735,10 +736,18 @@ pp.parseComprehension = function(node, isGenerator) {
     this.expect(tt.parenL)
     block.left = this.parseBindingAtom()
     this.checkLVal(block.left, true)
-    this.expectContextual("of")
+    cType = "of";
+    if (this.type === tt._in) {
+      cType = "in";
+      this.next();
+    } else if (!this.eatContextual("of")) {
+      this.unexpected();
+    }
     block.right = this.parseExpression()
     this.expect(tt.parenR)
-    node.blocks.push(this.finishNode(block, "ComprehensionBlock"))
+    cNode = this.finishNode(block, "ComprehensionBlock")
+    cNode.cType = cType
+    node.blocks.push(cNode)
   }
   node.filter = this.eat(tt._if) ? this.parseParenExpression() : null
   node.body = this.parseExpression()

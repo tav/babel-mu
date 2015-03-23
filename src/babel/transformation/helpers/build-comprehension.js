@@ -15,8 +15,16 @@ export default function build(node, buildBody) {
     }
   }
 
+  if (self.cType === "in") {
+    return t.forInStatement(
+      t.variableDeclaration("var", [t.variableDeclarator(self.left)]),
+      self.right,
+      t.blockStatement([child])
+    );
+  }
+
   return t.forOfStatement(
-    t.variableDeclaration("let", [t.variableDeclarator(self.left)]),
+    t.variableDeclaration("var", [t.variableDeclarator(self.left)]),
     self.right,
     t.blockStatement([child])
   );

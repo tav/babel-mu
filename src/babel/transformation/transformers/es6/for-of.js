@@ -9,10 +9,7 @@ export function ForOfStatement(node, parent, scope, file) {
     return _ForOfStatementArray.call(this, node, scope, file);
   }
 
-  var callback = spec;
-  if (file.isLoose("es6.forOf")) callback = loose;
-
-  var build  = callback(node, parent, scope, file);
+  var build  = loose(node, parent, scope, file);
   var declar = build.declar;
   var loop   = build.loop;
   var block  = loop.body;
@@ -77,17 +74,27 @@ export function _ForOfStatementArray(node, scope, file) {
 
 var loose = function (node, parent, scope, file) {
   var left = node.left;
-  var declar, id;
+  var declar, id, temp, tempID, tmpl = "for-of-loose";
 
-  if (t.isIdentifier(left) || t.isPattern(left) || t.isMemberExpression(left)) {
-    // for (i of test), for ({ i } of test)
+  // for (i of test)
+  if (t.isIdentifier(left)) {
+    tmpl = "for-of-loose-no-id";
     id = left;
+  // for ({ i } of test)
+  } else if (t.isPattern(left) || t.isMemberExpression(left)) {
+    id = scope.generateUidIdentifier("ref");
+    declar = t.expressionStatement(t.assignmentExpression("=", left, id));
   } else if (t.isVariableDeclaration(left)) {
     // for (var i of test)
-    id = scope.generateUidIdentifier("ref");
-    declar = t.variableDeclaration(left.kind, [
-      t.variableDeclarator(left.declarations[0].id, id)
-    ]);
+    if (left.kind === "var" && ((temp = left.declarations).length === 1) && ((tempID = temp[0].id).type === "Identifier")) {
+      id = {type: "Identifier", name: tempID.name};
+    // for (var { i } of test)
+    } else {
+      id = scope.generateUidIdentifier("ref");
+      declar = t.variableDeclaration(left.kind, [
+        t.variableDeclarator(left.declarations[0].id, id)
+      ]);
+    }
   } else {
     throw file.errorWithNode(left, messages.get("unknownForHead", left.type));
   }
@@ -95,77 +102,18 @@ var loose = function (node, parent, scope, file) {
   var iteratorKey = scope.generateUidIdentifier("iterator");
   var isArrayKey  = scope.generateUidIdentifier("isArray");
 
-  var loop = util.template("for-of-loose", {
+  var loop = util.template(tmpl, {
     LOOP_OBJECT:  iteratorKey,
     IS_ARRAY:     isArrayKey,
     OBJECT:       node.right,
-    INDEX:        scope.generateUidIdentifier("i"),
+    I_INDEX:      scope.generateUidIdentifier("i"),
+    J_INDEX:      scope.generateUidIdentifier("j"),
     ID:           id
   });
-
-  if (!declar) {
-    // no declaration so we need to remove the variable declaration at the top of
-    // the for-of-loose template
-    loop.body.body.shift();
-  }
-
-  //
 
   return {
     declar: declar,
     node:   loop,
     loop:   loop
-  };
-};
-
-var spec = function (node, parent, scope, file) {
-  var left = node.left;
-  var declar;
-
-  var stepKey   = scope.generateUidIdentifier("step");
-  var stepValue = t.memberExpression(stepKey, t.identifier("value"));
-
-  if (t.isIdentifier(left) || t.isPattern(left) || t.isMemberExpression(left)) {
-    // for (i of test), for ({ i } of test)
-    declar = t.expressionStatement(t.assignmentExpression("=", left, stepValue));
-  } else if (t.isVariableDeclaration(left)) {
-    // for (var i of test)
-    declar = t.variableDeclaration(left.kind, [
-      t.variableDeclarator(left.declarations[0].id, stepValue)
-    ]);
-  } else {
-    throw file.errorWithNode(left, messages.get("unknownForHead", left.type));
-  }
-
-  //
-
-  var iteratorKey = scope.generateUidIdentifier("iterator");
-
-  var template = util.template("for-of", {
-    ITERATOR_HAD_ERROR_KEY: scope.generateUidIdentifier("didIteratorError"),
-    ITERATOR_COMPLETION:    scope.generateUidIdentifier("iteratorNormalCompletion"),
-    ITERATOR_ERROR_KEY:     scope.generateUidIdentifier("iteratorError"),
-    ITERATOR_KEY:           iteratorKey,
-    STEP_KEY:               stepKey,
-    OBJECT:                 node.right,
-    BODY:                   null
-  });
-
-  var isLabeledParent = t.isLabeledStatement(parent);
-
-  var tryBody = template[3].block.body;
-  var loop = tryBody[0];
-
-  if (isLabeledParent) {
-    tryBody[0] = t.labeledStatement(parent.label, loop);
-  }
-
-  //
-
-  return {
-    replaceParent: isLabeledParent,
-    declar:        declar,
-    loop:          loop,
-    node:          template
   };
 };

@@ -1,5 +1,4 @@
-for (var ID,
-         IS_ARRAY = Array.isArray(OBJECT),
+for (var IS_ARRAY = Array.isArray(OBJECT),
          I_INDEX = 0,
          J_INDEX,
          LOOP_OBJECT = IS_ARRAY && OBJECT[Symbol.iterator]();;) {
