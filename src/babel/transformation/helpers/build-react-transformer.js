@@ -241,14 +241,14 @@ export default function (exports, opts) {
 
     for (var i = 0; i < props.length; i++) {
       var prop = props[i];
-      if (t.isIdentifier(prop.key, { name: "displayName" })) {
+      if (t.isIdentifier(prop.key, { name: "_name" })) {
         safe = false;
         break;
       }
     }
 
     if (safe) {
-      props.unshift(t.property("init", t.identifier("displayName"), t.literal(id)));
+      props.unshift(t.property("init", t.identifier("_name"), t.literal(id)));
     }
   };
 

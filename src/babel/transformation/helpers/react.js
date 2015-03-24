@@ -1,6 +1,6 @@
 import * as t from "../../types";
 
-var isCreateClassCallExpression = t.buildMatchMemberExpression("React.createClass");
+var isCreateClassCallExpression = t.buildMatchMemberExpression("mu.View");
 
 export function isCreateClass(node) {
   if (!node || !t.isCallExpression(node)) return false;

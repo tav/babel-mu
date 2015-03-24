@@ -1,27 +1,9 @@
 import * as react from "../../helpers/react";
 import * as t from "../../../types";
 
-var JSX_ANNOTATION_REGEX = /^\*\s*@jsx\s+([^\s]+)/;
-
 export function Program(node, parent, scope, file) {
-  var id = "React.createElement";
-
-  for (var i = 0; i < file.ast.comments.length; i++) {
-    var comment = file.ast.comments[i];
-    var matches = JSX_ANNOTATION_REGEX.exec(comment.value);
-    if (matches) {
-      id = matches[1];
-      if (id === "React.DOM") {
-        throw file.errorWithNode(comment, "The @jsx React.DOM pragma has been deprecated as of React 0.12");
-      } else {
-        break;
-      }
-    }
-  }
-
-  file.set("jsxIdentifier", id.split(".").map(t.identifier).reduce(function (object, property) {
-    return t.memberExpression(object, property);
-  }));
+  file.set("jsxIdentifierTag", t.memberExpression(t.identifier("mu"), t.identifier("Tag")));
+  file.set("jsxIdentifierElem", t.memberExpression(t.identifier("mu"), t.identifier("Elem")));
 }
 
 require("../../helpers/build-react-transformer")(exports, {
@@ -36,6 +18,20 @@ require("../../helpers/build-react-transformer")(exports, {
   },
 
   post(state, file) {
-    state.callee = file.get("jsxIdentifier");
+    var props = state.args[1];
+    if (props.type === "ObjectExpression") {
+      props = props.properties;
+      for (var i = 0; i < props.length; i++) {
+        var prop = props[i];
+        if (prop.key.name === "class") {
+          prop.key.name = "className";
+        }
+      }
+    }
+    if (react.isCompatTag(state.tagName)) {
+      state.callee = file.get("jsxIdentifierTag");
+    } else {
+      state.callee = file.get("jsxIdentifierElem");
+    }
   }
 });
