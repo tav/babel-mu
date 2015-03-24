@@ -14,6 +14,43 @@ export function ComprehensionExpression(node, parent, scope, file) {
   return callback(node, parent, scope, file);
 }
 
+export function ForInStatement(node, parent, scope, file) {
+  var nodes = [];
+  var right = node.right;
+
+  if (!t.isIdentifier(right)) {
+    var uid = scope.generateUidIdentifier("arr");
+    nodes.push(t.variableDeclaration("var", [
+      t.variableDeclarator(uid, right)
+    ]));
+    right = uid;
+  }
+
+  var iterationKey = scope.generateUidIdentifier("i");
+
+  var loop = util.template("for-of-array", {
+    BODY: node.body,
+    KEY:  iterationKey,
+    ARR:  right
+  });
+
+  t.inherits(loop, node);
+  t.ensureBlock(loop);
+
+  var iterationValue = t.memberExpression(right, iterationKey, true);
+
+  var left = node.left;
+  if (t.isVariableDeclaration(left)) {
+    left.declarations[0].init = iterationValue;
+    loop.body.body.unshift(left);
+  } else {
+    loop.body.body.unshift(t.expressionStatement(t.assignmentExpression("=", left, iterationValue)));
+  }
+
+  nodes.push(loop);
+  return nodes;
+}
+
 function generator(node) {
   var body = [];
   var container = t.functionExpression(null, [], t.blockStatement(body), true);

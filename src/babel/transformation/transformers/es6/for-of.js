@@ -74,11 +74,11 @@ export function _ForOfStatementArray(node, scope, file) {
 
 var loose = function (node, parent, scope, file) {
   var left = node.left;
-  var declar, id, temp, tempID, tmpl = "for-of-loose";
+  var declar, id, temp, tempID, tmpl = "for-of";
 
   // for (i of test)
   if (t.isIdentifier(left)) {
-    tmpl = "for-of-loose-no-id";
+    tmpl = "for-of-no-id";
     id = left;
   // for ({ i } of test)
   } else if (t.isPattern(left) || t.isMemberExpression(left)) {
@@ -99,13 +99,15 @@ var loose = function (node, parent, scope, file) {
     throw file.errorWithNode(left, messages.get("unknownForHead", left.type));
   }
 
-  var iteratorKey = scope.generateUidIdentifier("iterator");
-  var isArrayKey  = scope.generateUidIdentifier("isArray");
+  if (!t.isIdentifier(node.right)) {
+    tmpl += "-assign";
+  }
 
   var loop = util.template(tmpl, {
-    LOOP_OBJECT:  iteratorKey,
-    IS_ARRAY:     isArrayKey,
+    ITERATOR:     scope.generateUidIdentifier("iterator"),
+    IS_ARRAY:     scope.generateUidIdentifier("isArray"),
     OBJECT:       node.right,
+    SEQ:          scope.generateUidIdentifier("seq"),
     I_INDEX:      scope.generateUidIdentifier("i"),
     J_INDEX:      scope.generateUidIdentifier("j"),
     ID:           id
